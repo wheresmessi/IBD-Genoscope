@@ -19,16 +19,11 @@ A full-stack web application for **SNP search, disease filtering, pathway enrich
 ### **Frontend**
 - React (Vite)
 - React Router
-- Tailwind CSS
 - Lucide Icons
 - Google OAuth
 
 ### **Backend**
 - Node.js (Express)
-- MongoDB (or any preferred database)
-- JWT Authentication
-
 ---
 
-## 📂 Project Structure
 
