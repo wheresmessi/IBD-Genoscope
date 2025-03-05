@@ -25,18 +25,10 @@ export default function DatasetPage() {
     setLoading(true);
     setError("");
     try {
-      // Mock data for development - in production this would be a real API call
-      setTimeout(() => {
-        const mockData = generateMockData(dataset);
-        setResults(mockData);
-        setFilteredResults(mockData);
-        setLoading(false);
-      }, 800);
-      
-      // In production, use this:
-      // const { data } = await axios.get(`http://localhost:5000/all-rsids?dataset=${dataset}`);
-      // setResults(data);
-      // setFilteredResults(data);
+      const { data } = await axios.get(`http://localhost:5000/all-rsids?dataset=${dataset}`);
+      setResults(data);
+      setFilteredResults(data);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching dataset:", error);
       setError("Failed to load dataset. Please try again later.");
@@ -46,27 +38,14 @@ export default function DatasetPage() {
 
   // Function to search SNP by rsID
   const searchSNP = async () => {
-    if (!rsid.trim()) {
-      return;
-    }
-    
+    if (!rsid.trim()) return;
     setLoading(true);
     setError("");
     try {
-      // Mock search for development
-      setTimeout(() => {
-        const mockData = generateMockData(dataset).filter(item => 
-          item.rsid.toLowerCase().includes(rsid.toLowerCase())
-        );
-        setResults(mockData);
-        setFilteredResults(mockData);
-        setLoading(false);
-      }, 500);
-      
-      // In production, use this:
-      // const { data } = await axios.get(`http://localhost:5000/search?dataset=${dataset}&rsid=${rsid}`);
-      // setResults(data);
-      // setFilteredResults(data);
+      const { data } = await axios.get(`http://localhost:5000/search?dataset=${dataset}&rsid=${rsid}`);
+      setResults(data);
+      setFilteredResults(data);
+      setLoading(false);
     } catch (error) {
       console.error("Error searching SNP:", error);
       setError("Failed to search for SNP. Please try again.");
@@ -89,56 +68,19 @@ export default function DatasetPage() {
     }
   }, [searchTerm, results]);
 
-  // Generate mock data for development
-  const generateMockData = (datasetType) => {
-    const count = 20;
-    const data = [];
-    
-    if (datasetType === 'clinvar') {
-      for (let i = 0; i < count; i++) {
-        data.push({
-          rsid: `rs${100000 + i}`,
-          gene: ['BRCA1', 'BRCA2', 'TP53', 'APC', 'CFTR'][Math.floor(Math.random() * 5)],
-          chromosome: ['1', '2', '3', '4', '5', '6', '7', 'X', 'Y'][Math.floor(Math.random() * 9)],
-          position: Math.floor(Math.random() * 100000000),
-          clinical_significance: ['Pathogenic', 'Likely pathogenic', 'Uncertain significance', 'Likely benign', 'Benign'][Math.floor(Math.random() * 5)],
-          phenotype: ['IBD', 'Crohn\'s disease', 'Ulcerative colitis', 'Not specified'][Math.floor(Math.random() * 4)]
-        });
-      }
-    } else {
-      for (let i = 0; i < count; i++) {
-        data.push({
-          rsid: `rs${200000 + i}`,
-          gene: ['NOD2', 'IL23R', 'ATG16L1', 'IRGM', 'IL10'][Math.floor(Math.random() * 5)],
-          chromosome: ['1', '2', '3', '4', '5', '6', '7', 'X', 'Y'][Math.floor(Math.random() * 9)],
-          position: Math.floor(Math.random() * 100000000),
-          risk_allele: ['A', 'C', 'G', 'T'][Math.floor(Math.random() * 4)],
-          odds_ratio: (1 + Math.random() * 3).toFixed(2),
-          p_value: (Math.random() * 0.001).toExponential(3)
-        });
-      }
-    }
-    
-    return data;
-  };
-
   return (
     <div>
-      <header className="header">
-        IBD Genoscope
-      </header>
-      
+      <header className="header">IBD Genoscope</header>
       <div className="main-container dataset-page">
         <div className="dataset-view">
           <div className="dataset-header">
             <h1>Dataset: {dataset === 'clinvar' ? 'ClinVar' : 'IBD Genetic Risk'}</h1>
-            <button className="btn btn-secondary" onClick={() => navigate('/SelectDataset')}>
+            <button className="btn btn-secondary" onClick={() => navigate('/select-dataset')}>
               Change Dataset
             </button>
           </div>
 
           <div className="tools-section">
-            {/* SNP Search */}
             <div className="tool-card">
               <h2><Search size={18} /> Search by rsID</h2>
               <div className="tool-content">
@@ -152,23 +94,8 @@ export default function DatasetPage() {
                 <button onClick={searchSNP} className="btn btn-primary">Search SNP</button>
               </div>
             </div>
-
-            {/* PRS Calculator */}
-            <div className="tool-card">
-              <h2><Calculator size={18} /> PRS Calculator</h2>
-              <div className="tool-content">
-                <p>Calculate polygenic risk score based on genetic variants.</p>
-                <button 
-                  className="btn btn-primary" 
-                  onClick={() => navigate(`/tools?dataset=${dataset}`)}
-                >
-                  Open Calculator
-                </button>
-              </div>
-            </div>
           </div>
 
-          {/* Dataset Table Section */}
           <div className="table-section">
             <div className="table-header">
               <h2><Database size={18} /> Data Explorer</h2>
@@ -192,33 +119,38 @@ export default function DatasetPage() {
               <div className="empty-state">No results found. Try a different search term.</div>
             ) : (
               <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      {Object.keys(filteredResults[0]).map((key) => (
-                        <th key={key}>{key.replace('_', ' ').toUpperCase()}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredResults.map((row, index) => (
-                      <tr key={index}>
-                        {Object.values(row).map((value, i) => (
-                          <td key={i}>{value}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+  <table className="data-table">
+    <thead>
+      <tr>
+        {Object.keys(filteredResults[0]).map((key) => (
+          <th key={key}>{key.replace('_', ' ').toUpperCase()}</th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {filteredResults.map((row, index) => (
+        <tr key={index}>
+          {Object.entries(row).map(([key, value], i) => (
+            <td key={i}>
+              {key === "Dataset Link" ? (
+                <a href={value} target="_blank" rel="noopener noreferrer">
+                  {value}
+                </a>
+              ) : (
+                value
+              )}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
             )}
           </div>
         </div>
       </div>
-      
-      <footer className="footer">
-        K. Lathika | Email: korrapatilathika@gmail.com
-      </footer>
+      <footer className="footer">K. Lathika | Email: korrapatilathika@gmail.com</footer>
     </div>
   );
 }

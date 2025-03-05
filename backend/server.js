@@ -157,6 +157,78 @@ app.post("/calculate-prs", (req, res) => {
     res.json({ totalPRS: totalPRS.toFixed(2), riskLevel, details: results });
 });
 
+const axios = require("axios");
+
+
+// API Route to Fetch Pathways for a Gene
+app.get("/api/kegg/:gene", async (req, res) => {
+    try {
+        const gene = req.params.gene;
+        console.log("Fetching pathways for gene:", gene);
+
+        // Step 1: Get KEGG ID
+        const findGeneUrl = `http://rest.kegg.jp/find/genes/${gene}`;
+        const findGeneResponse = await axios.get(findGeneUrl);
+
+        // Extract KEGG ID from response
+        const geneData = findGeneResponse.data.split("\n")[0]; // Take the first match
+        const match = geneData.match(/(hsa:\d+)/);
+
+        if (!match) {
+            return res.status(404).json({ error: "Gene not found in KEGG database" });
+        }
+
+        const keggId = match[1];
+
+        // Step 2: Get Pathways for the Gene
+        const pathwayUrl = `http://rest.kegg.jp/link/pathway/${keggId}`;
+        const pathwayResponse = await axios.get(pathwayUrl);
+
+        // Process pathway data
+        const pathways = pathwayResponse.data
+            .split("\n")
+            .filter(line => line.includes("path:hsa"))
+            .map(line => {
+                const parts = line.split("\t");
+                return parts[1].replace("path:", "");
+            });
+
+        res.json({ geneId: keggId, pathways });
+    } catch (error) {
+        console.error("Error:", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// API Route to Fetch Pathway Image
+app.get("/api/kegg/pathway/:pathwayId", async (req, res) => {
+    try {
+        const pathwayId = req.params.pathwayId;
+        console.log("Fetching pathway image for:", pathwayId);
+
+        const imageUrl = `http://rest.kegg.jp/get/${pathwayId}/image`;
+        console.log("KEGG Image URL:", imageUrl);
+
+        const imageResponse = await axios.get(imageUrl, { responseType: "arraybuffer" });
+
+        if (!imageResponse.data) {
+            console.log("No image data received from KEGG.");
+            return res.status(404).json({ error: "No pathway image found" });
+        }
+
+        // Convert image to Base64
+        const base64Image = Buffer.from(imageResponse.data, "binary").toString("base64");
+        const imageSrc = `data:image/png;base64,${base64Image}`;
+
+        console.log("Successfully fetched pathway image.");
+        res.json({ imageSrc });
+    } catch (error) {
+        console.error("Error fetching pathway image:", error.message);
+        res.status(500).json({ error: "Failed to fetch pathway image", details: error.message });
+    }
+});
+
+
 
 // Start server
 const PORT = process.env.PORT || 5000;

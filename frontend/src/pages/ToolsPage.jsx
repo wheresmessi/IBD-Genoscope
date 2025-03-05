@@ -1,29 +1,43 @@
 import React, { useState } from "react";
-import PRSChart from "./PRSChart"; // Import the PRS visualization component
+import PathwaySearch from "./PathwaySearch";
+import PRSChart from "./PRSChart";
 
 const ToolsPage = () => {
-    const [snps, setSnps] = useState([{ rsID: "", genotypeWeight: "" }]); // Array for multiple rsIDs
+    const [selectedTool, setSelectedTool] = useState(null);
+
+    return (
+        <div className="tools-container">
+            <h2>Select a Tool</h2>
+            {!selectedTool ? (
+                <div className="tool-selection">
+                    <button onClick={() => setSelectedTool("pathway")}>Pathway Analysis</button>
+                    <button onClick={() => setSelectedTool("prs")}>PRS Calculator</button>
+                </div>
+            ) : (
+                <div>
+                    <button onClick={() => setSelectedTool(null)}>Back to Selection</button>
+                    {selectedTool === "pathway" && <PathwaySearch />}
+                    {selectedTool === "prs" && <PRSCalculator />}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const PRSCalculator = () => {
+    const [snps, setSnps] = useState([{ rsID: "", genotypeWeight: "" }]);
     const [prsResult, setPrsResult] = useState(null);
     const [error, setError] = useState("");
 
-    // Handle input change for rsID & genotype weight
     const handleInputChange = (index, field, value) => {
         const updatedSnps = [...snps];
         updatedSnps[index][field] = value;
         setSnps(updatedSnps);
     };
 
-    // Add a new SNP input field
-    const addSNP = () => {
-        setSnps([...snps, { rsID: "", genotypeWeight: "" }]);
-    };
+    const addSNP = () => setSnps([...snps, { rsID: "", genotypeWeight: "" }]);
+    const removeSNP = (index) => setSnps(snps.filter((_, i) => i !== index));
 
-    // Remove an SNP input field
-    const removeSNP = (index) => {
-        setSnps(snps.filter((_, i) => i !== index));
-    };
-
-    // Calculate PRS
     const calculatePRS = async () => {
         setError("");
         setPrsResult(null);
@@ -36,13 +50,8 @@ const ToolsPage = () => {
             });
 
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-
             const data = await response.json();
-            if (data.error) {
-                setError(data.error);
-            } else {
-                setPrsResult(data);
-            }
+            data.error ? setError(data.error) : setPrsResult(data);
         } catch (error) {
             setError("Error fetching PRS data. Please try again.");
             console.error("Error:", error);
@@ -50,9 +59,8 @@ const ToolsPage = () => {
     };
 
     return (
-        <div className="tools-container">
+        <div>
             <h2>Polygenic Risk Score (PRS) Calculator</h2>
-
             {snps.map((snp, index) => (
                 <div key={index} className="snp-input">
                     <input
@@ -60,41 +68,29 @@ const ToolsPage = () => {
                         placeholder="Enter rsID"
                         value={snp.rsID}
                         onChange={(e) => handleInputChange(index, "rsID", e.target.value)}
-                        className="input-field"
                     />
                     <input
                         type="number"
                         placeholder="Genotype Weight"
                         value={snp.genotypeWeight}
                         onChange={(e) => handleInputChange(index, "genotypeWeight", e.target.value)}
-                        className="input-field"
                     />
-                    {snps.length > 1 && (
-                        <button onClick={() => removeSNP(index)} className="remove-button">✖</button>
-                    )}
+                    {snps.length > 1 && <button onClick={() => removeSNP(index)}>✖</button>}
                 </div>
             ))}
-
-            <button onClick={addSNP} className="add-button">+ Add rsID</button>
-            <button onClick={calculatePRS} className="calculate-button">Calculate PRS</button>
-
-            {error && <p className="warning">{error}</p>}
-
+            <button onClick={addSNP}>+ Add rsID</button>
+            <button onClick={calculatePRS}>Calculate PRS</button>
+            {error && <p>{error}</p>}
             {prsResult && (
-                <div className="result-box">
+                <div>
                     <h3>Total PRS Score: {prsResult.totalPRS}</h3>
                     <p>Risk Level: {prsResult.riskLevel}</p>
-
                     <h4>Individual rsID Scores:</h4>
                     <ul>
                         {prsResult.details.map((snp, idx) => (
-                            <li key={idx}>
-                                {snp.rsID}: {snp.prsScore || snp.error}
-                            </li>
+                            <li key={idx}>{snp.rsID}: {snp.prsScore || snp.error}</li>
                         ))}
                     </ul>
-
-                    {/* PRS Chart Visualization */}
                     <PRSChart prsScore={prsResult.totalPRS} />
                 </div>
             )}
