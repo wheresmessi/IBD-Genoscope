@@ -29,7 +29,7 @@ const About = () => {
         </div>
 
         <div className="about-section">
-          <h3>Our Mission</h3>
+          <h3 style={{ color: "#3498db" }}>Our Mission</h3>
           <p>
             IBD GENOSCOPE aims to provide accessible tools for researchers and clinicians to analyze
             genetic data related to Inflammatory Bowel Disease. Our platform facilitates the exploration
@@ -37,7 +37,7 @@ const About = () => {
             approaches for IBD treatment.
           </p>
 
-          <h3>Research Focus</h3>
+          <h3 style={{ color: "#3498db" }}>Research Focus</h3>
           <p>
             Our research focuses on identifying genetic variants associated with IBD susceptibility,
             disease progression, and treatment response. By leveraging large-scale genomic datasets

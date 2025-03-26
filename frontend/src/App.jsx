@@ -7,6 +7,7 @@ import ToolsPage from "./pages/ToolsPage";
 import IBDGenoscope from "./pages/IBDGenoscope";
 import Layout from "./components/Layout";
 import About from "./pages/About";
+import Signup from "./pages/Signup";
 function App() {
   return (
     <Router>
@@ -21,6 +22,7 @@ function App() {
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/ibd-genoscope" element={<IBDGenoscope />} />
           <Route path="/about" element={<About />} />
+          <Route path="/signup" element={<Signup />} />
         </Route>
       </Routes>
     </Router>

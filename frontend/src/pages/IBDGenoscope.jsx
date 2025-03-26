@@ -22,13 +22,13 @@ const IBDGenoscope = () => {
         {/* 🔹 Right Side - Buttons with Navigation */}
         <div className="ibd-buttons">
           <Link to="/select-dataset">
-            <button className="ibd-btn">Search Datasets</button>
+            <button className="btn btn-primary">Search Datasets</button>
           </Link>
           <Link to="/tools">
-            <button className="ibd-btn">Tools</button>
+            <button className="btn btn-primary">Tools</button>
           </Link>
           <Link to="/about">
-            <button className="ibd-btn">About</button>
+            <button className="btn btn-primary">About</button>
           </Link>
         </div>
       </div>

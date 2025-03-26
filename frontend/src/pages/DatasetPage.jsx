@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Search, Database, Calculator } from "lucide-react";
+import { Search, Database } from "lucide-react";
 
 export default function DatasetPage() {
   const [searchParams] = useSearchParams();
@@ -53,20 +53,46 @@ export default function DatasetPage() {
     }
   };
 
-  // Handle search filtering
+  // Handle search filtering with debouncing
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredResults(results);
-    } else {
-      setFilteredResults(
-        results.filter((row) =>
-          Object.values(row).some((value) =>
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
+    const delaySearch = setTimeout(() => {
+      if (searchTerm.trim() === "") {
+        setFilteredResults(results);
+      } else {
+        setFilteredResults(
+          results.filter((row) =>
+            Object.values(row).some((value) =>
+              String(value).toLowerCase().includes(searchTerm.toLowerCase())
+            )
           )
-        )
-      );
-    }
+        );
+      }
+    }, 300);
+
+    return () => clearTimeout(delaySearch);
   }, [searchTerm, results]);
+
+  // Function to download dataset as CSV
+  const downloadCSV = () => {
+    if (filteredResults.length === 0) {
+      alert("No data available to download.");
+      return;
+    }
+
+    const csvHeader = Object.keys(filteredResults[0]).join(",") + "\n";
+    const csvRows = filteredResults
+      .map((row) => Object.values(row).map((value) => `"${value}"`).join(","))
+      .join("\n");
+
+    const csvContent = "data:text/csv;charset=utf-8," + csvHeader + csvRows;
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${dataset}_dataset.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div>
@@ -75,9 +101,14 @@ export default function DatasetPage() {
         <div className="dataset-view">
           <div className="dataset-header">
             <h1>Dataset: {dataset === 'clinvar' ? 'ClinVar' : 'IBD Genetic Risk'}</h1>
-            <button className="btn btn-secondary" onClick={() => navigate('/select-dataset')}>
-              Change Dataset
-            </button>
+            <div className="button-group">
+              <button className="btn btn-secondary" onClick={() => navigate('/select-dataset')}>
+                Change Dataset
+              </button>
+              <button onClick={downloadCSV} className="btn btn-primary">
+                Download CSV
+              </button>
+            </div>
           </div>
 
           <div className="tools-section">
@@ -119,33 +150,33 @@ export default function DatasetPage() {
               <div className="empty-state">No results found. Try a different search term.</div>
             ) : (
               <div className="table-container">
-  <table className="data-table">
-    <thead>
-      <tr>
-        {Object.keys(filteredResults[0]).map((key) => (
-          <th key={key}>{key.replace('_', ' ').toUpperCase()}</th>
-        ))}
-      </tr>
-    </thead>
-    <tbody>
-      {filteredResults.map((row, index) => (
-        <tr key={index}>
-          {Object.entries(row).map(([key, value], i) => (
-            <td key={i}>
-              {key === "Dataset Link" ? (
-                <a href={value} target="_blank" rel="noopener noreferrer">
-                  {value}
-                </a>
-              ) : (
-                value
-              )}
-            </td>
-          ))}
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {Object.keys(filteredResults[0]).map((key) => (
+                        <th key={key}>{key.replace('_', ' ').toUpperCase()}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredResults.map((row, index) => (
+                      <tr key={index}>
+                        {Object.entries(row).map(([key, value], i) => (
+                          <td key={i}>
+                            {key === "Dataset Link" ? (
+                              <a href={value} target="_blank" rel="noopener noreferrer">
+                                {value}
+                              </a>
+                            ) : (
+                              value
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>

@@ -7,25 +7,34 @@ const ToolsPage = () => {
 
     return (
         <div className="tools-container">
-            <h2>Select a Tool</h2>
-            {!selectedTool ? (
-                <div className="tool-selection">
-                    <button onClick={() => setSelectedTool("pathway")}>Pathway Analysis</button>
-                    <button onClick={() => setSelectedTool("prs")}>PRS Calculator</button>
-                </div>
-            ) : (
-                <div>
-                    <button onClick={() => setSelectedTool(null)}>Back to Selection</button>
-                    {selectedTool === "pathway" && <PathwaySearch />}
-                    {selectedTool === "prs" && <PRSCalculator />}
-                </div>
-            )}
+            <div className="tools-card">
+                <h2>Select a Tool</h2>
+                {!selectedTool ? (
+                    <div className="tool-selection">
+                        <button className="btn btn-primary" onClick={() => setSelectedTool("pathway")}>
+                            🚀 Pathway Analysis
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => setSelectedTool("prs")}>
+                            🧬 PRS Calculator
+                        </button>
+                    </div>
+                ) : (
+                    <div>
+                        <button className="btn btn-secondary" onClick={() => setSelectedTool(null)}>
+                            ⬅ Back to Selection
+                        </button>
+                        {selectedTool === "pathway" && <PathwaySearch />}
+                        {selectedTool === "prs" && <PRSCalculator />}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
 const PRSCalculator = () => {
     const [snps, setSnps] = useState([{ rsID: "", genotypeWeight: "" }]);
+    const [gene, setGene] = useState(""); // New Gene input state
     const [prsResult, setPrsResult] = useState(null);
     const [error, setError] = useState("");
 
@@ -46,7 +55,7 @@ const PRSCalculator = () => {
             const response = await fetch("http://localhost:5000/calculate-prs", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ snps }),
+                body: JSON.stringify({ snps, gene }), // Include Gene in request
             });
 
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -59,8 +68,19 @@ const PRSCalculator = () => {
     };
 
     return (
-        <div>
+        <div className="prs-container">
             <h2>Polygenic Risk Score (PRS) Calculator</h2>
+
+            {/* Gene Input Field */}
+            <div className="snp-input">
+                <input
+                    type="text"
+                    placeholder="Enter Gene Name"
+                    value={gene}
+                    onChange={(e) => setGene(e.target.value)}
+                />
+            </div>
+
             {snps.map((snp, index) => (
                 <div key={index} className="snp-input">
                     <input
@@ -75,14 +95,18 @@ const PRSCalculator = () => {
                         value={snp.genotypeWeight}
                         onChange={(e) => handleInputChange(index, "genotypeWeight", e.target.value)}
                     />
-                    {snps.length > 1 && <button onClick={() => removeSNP(index)}>✖</button>}
+                    {snps.length > 1 && (
+                        <button className="btn btn-danger" onClick={() => removeSNP(index)}>
+                            ✖
+                        </button>
+                    )}
                 </div>
             ))}
-            <button onClick={addSNP}>+ Add rsID</button>
-            <button onClick={calculatePRS}>Calculate PRS</button>
-            {error && <p>{error}</p>}
+            <button className="btn btn-add" onClick={addSNP}>+ Add rsID</button>
+            <button className="btn btn-primary" onClick={calculatePRS}>Calculate PRS</button>
+            {error && <p className="error-msg">{error}</p>}
             {prsResult && (
-                <div>
+                <div className="prs-result">
                     <h3>Total PRS Score: {prsResult.totalPRS}</h3>
                     <p>Risk Level: {prsResult.riskLevel}</p>
                     <h4>Individual rsID Scores:</h4>

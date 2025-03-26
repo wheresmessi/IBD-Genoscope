@@ -3,6 +3,9 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const csv = require("csv-parser");
+const csvParser = require("csv-parser");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(cors());
@@ -110,26 +113,36 @@ app.post("/analyze-pathways", (req, res) => {
         pathways: ["Pathway 1", "Pathway 2", "Pathway 3"]
     });
 });
-
 app.post("/calculate-prs", (req, res) => {
-    const { snps } = req.body; // Expect an array of { rsID, genotypeWeight }
+    const { gene, snps } = req.body;
 
-    if (!snps || snps.length === 0) {
-        return res.status(400).json({ error: "At least one rsID is required." });
+    if (!gene && (!snps || snps.length === 0)) {
+        return res.status(400).json({ error: "At least one rsID or Gene is required." });
     }
 
     let totalPRS = 0;
     let results = [];
+    let selectedSNPs = [];
 
-    snps.forEach(({ rsID, genotypeWeight }) => {
-        // Find SNP in dataset
-        const snp = ibdData.find((entry) => entry["rsID"]?.trim().toLowerCase() === rsID.toLowerCase());
+    if (gene) {
+        selectedSNPs = ibdData.filter(entry =>
+            entry["Gene"]
+                ?.split(",")
+                .map(g => g.trim().toLowerCase())
+                .includes(gene.toLowerCase())
+        ).filter(snp => snp["beta"] && snp["beta"].toLowerCase() !== "n/a"); // Filter valid beta values
+    } else {
+        selectedSNPs = snps.map(({ rsID }) =>
+            ibdData.find(entry => entry["rsID"]?.trim().toLowerCase() === rsID.toLowerCase())
+        ).filter(snp => snp && snp["beta"] && snp["beta"].toLowerCase() !== "n/a"); // Ensure valid beta values
+    }
 
-        if (!snp) {
-            results.push({ rsID, error: "rsID not found" });
-            return;
-        }
+    if (selectedSNPs.length === 0) {
+        return res.status(404).json({ error: "No valid SNPs with Beta values found for the given Gene." });
+    }
 
+    selectedSNPs.forEach((snp) => {
+        const rsID = snp["rsID"];
         let beta = parseFloat(snp["beta"]);
         let orValue = parseFloat(snp["orValue"]);
         let effectSize;
@@ -143,8 +156,8 @@ app.post("/calculate-prs", (req, res) => {
             return;
         }
 
-        const genotype = genotypeWeight ? parseFloat(genotypeWeight) : 1;
-        const prsScore = genotype * effectSize;
+        const genotypeWeight = snps?.find(s => s.rsID === rsID)?.genotypeWeight || 1;
+        const prsScore = parseFloat(genotypeWeight) * effectSize;
         totalPRS += prsScore;
 
         results.push({ rsID, prsScore: prsScore.toFixed(2) });
@@ -156,6 +169,7 @@ app.post("/calculate-prs", (req, res) => {
 
     res.json({ totalPRS: totalPRS.toFixed(2), riskLevel, details: results });
 });
+
 
 const axios = require("axios");
 
@@ -228,6 +242,61 @@ app.get("/api/kegg/pathway/:pathwayId", async (req, res) => {
     }
 });
 
+require("dotenv").config();
+const SECRET_KEY = process.env.SECRET_KEY;
+
+if (!SECRET_KEY) {
+  throw new Error("SECRET_KEY is missing in environment variables");
+}
+
+const USERS_CSV = "users.csv"; // Your CSV file
+
+// Read users from CSV
+const readUsersFromCSV = () => {
+  return new Promise((resolve, reject) => {
+    const users = [];
+    fs.createReadStream(USERS_CSV)
+      .pipe(csvParser())
+      .on("data", (row) => users.push(row))
+      .on("end", () => resolve(users))
+      .on("error", (error) => reject(error));
+  });
+};
+
+// Write new user to CSV
+const appendUserToCSV = (user) => {
+  fs.appendFileSync(USERS_CSV, `\n${user.email},${user.password}`);
+};
+
+// Login route
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  const users = await readUsersFromCSV();
+
+  const user = users.find((u) => u.email === email);
+  if (!user) return res.status(400).json({ message: "User not found" });
+
+  const passwordMatch = await bcrypt.compare(password, user.password);
+  if (!passwordMatch) return res.status(401).json({ message: "Invalid credentials" });
+
+  const token = jwt.sign({ email: user.email }, SECRET_KEY, { expiresIn: "1h" });
+  res.json({ token });
+});
+
+// Signup route
+app.post("/signup", async (req, res) => {
+  const { email, password } = req.body;
+  const users = await readUsersFromCSV();
+
+  if (users.some((u) => u.email === email)) {
+    return res.status(400).json({ message: "Email already exists" });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  appendUserToCSV({ email, password: hashedPassword });
+
+  res.json({ message: "User registered successfully" });
+});
 
 
 // Start server
