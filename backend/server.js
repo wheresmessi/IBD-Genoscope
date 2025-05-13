@@ -164,15 +164,14 @@ app.post("/calculate-prs", (req, res) => {
     });
 
     let riskLevel = "Low";
-    if (totalPRS > 1.5) riskLevel = "High";
-    else if (totalPRS > 0.8) riskLevel = "Moderate";
+    if (totalPRS > 0.7) riskLevel = "High";
+    else if (totalPRS > 0.4) riskLevel = "Moderate";
 
     res.json({ totalPRS: totalPRS.toFixed(2), riskLevel, details: results });
 });
 
 
 const axios = require("axios");
-
 
 // API Route to Fetch Pathways for a Gene
 app.get("/api/kegg/:gene", async (req, res) => {
@@ -298,6 +297,66 @@ app.post("/signup", async (req, res) => {
   res.json({ message: "User registered successfully" });
 });
 
+// API to add new data to a dataset
+app.post("/add-data", async (req, res) => {
+    const { dataset, data } = req.body;
+
+    if (!dataset || !data) {
+        return res.status(400).json({ error: "Dataset and data are required" });
+    }
+
+    try {
+        // Validate required fields
+        const requiredFields = dataset === 'clinvar' 
+            ? ['rsid', 'gene', 'phenotype', 'clinical_significance', 'chromosome']
+            : ['rsid', 'gene', 'risk_allele', 'odds_ratio'];
+
+        const missingFields = requiredFields.filter(field => !data[field]);
+        if (missingFields.length > 0) {
+            return res.status(400).json({ 
+                error: `Missing required fields: ${missingFields.join(', ')}` 
+            });
+        }
+
+        // Format data according to dataset schema
+        const formattedData = dataset === 'clinvar' 
+            ? {
+                rsID: data.rsid,
+                Gene: data.gene,
+                Phenotype: data.phenotype,
+                "Clinical Significance": data.clinical_significance,
+                Chromosome: data.chromosome,
+                "Dataset Link": data.dataset_link || ''
+            }
+            : {
+                rsID: data.rsid,
+                Gene: data.gene,
+                "Risk Allele": data.risk_allele,
+                "Odds Ratio": data.odds_ratio,
+                "Dataset Link": data.dataset_link || ''
+            };
+
+        // Add to memory dataset
+        if (dataset === 'clinvar') {
+            clinvarData.push(formattedData);
+            // Append to CSV file
+            const csvPath = path.join(__dirname, "cleaned_clinvar_data.csv");
+            const csvLine = Object.values(formattedData).map(val => `"${val}"`).join(',') + '\n';
+            fs.appendFileSync(csvPath, csvLine);
+        } else if (dataset === 'ibd') {
+            ibdData.push(formattedData);
+            // Append to CSV file
+            const csvPath = path.join(__dirname, "cleaned_risk_db_data_new.csv");
+            const csvLine = Object.values(formattedData).map(val => `"${val}"`).join(',') + '\n';
+            fs.appendFileSync(csvPath, csvLine);
+        }
+
+        res.json({ message: "Data added successfully", data: formattedData });
+    } catch (error) {
+        console.error("Error adding data:", error);
+        res.status(500).json({ error: "Failed to add data" });
+    }
+});
 
 // Start server
 const PORT = process.env.PORT || 5000;

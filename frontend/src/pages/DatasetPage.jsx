@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Search, Database } from "lucide-react";
+import { Search, Database, Plus } from "lucide-react";
+import AddDataForm from "../components/AddDataForm";
 
 export default function DatasetPage() {
   const [searchParams] = useSearchParams();
@@ -14,6 +15,7 @@ export default function DatasetPage() {
   const [rsid, setRsid] = useState(""); // SNP Search input
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
 
   // Fetch dataset when component loads
   useEffect(() => {
@@ -95,93 +97,140 @@ export default function DatasetPage() {
   };
 
   return (
-    <div>
-      <header className="header">IBD Genoscope</header>
-      <div className="main-container dataset-page">
-        <div className="dataset-view">
-          <div className="dataset-header">
-            <h1>Dataset: {dataset === 'clinvar' ? 'ClinVar' : 'IBD Genetic Risk'}</h1>
-            <div className="button-group">
-              <button className="btn btn-secondary" onClick={() => navigate('/select-dataset')}>
-                Change Dataset
-              </button>
-              <button onClick={downloadCSV} className="btn btn-primary">
-                Download CSV
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-white shadow-sm py-2 px-6 fixed top-0 w-full z-10">
+        <div className="max-w-7xl mx-auto flex justify-center items-center">
+          <h2 className="text-3xl font-bold text-blue-600 tracking-wide">
+            IBD Genoscope
+          </h2>
+        </div>
+      </header>
 
-          <div className="tools-section">
-            <div className="tool-card">
-              <h2><Search size={18} /> Search by rsID</h2>
-              <div className="tool-content">
+      <main className="flex-grow mt-16 mb-16 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Dataset: {dataset === 'clinvar' ? 'ClinVar' : 'IBD Genetic Risk'}
+              </h2>
+              <div className="flex gap-3">
+                <button 
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                  onClick={() => navigate('/select-dataset')}
+                >
+                  Change Dataset
+                </button>
+                <button 
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  onClick={downloadCSV}
+                >
+                  Download CSV
+                </button>
+                <button 
+                  className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 
+                    ${showAddForm 
+                      ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' 
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  onClick={() => setShowAddForm(!showAddForm)}
+                >
+                  <Plus size={16} /> {showAddForm ? 'Cancel' : 'Add New Data'}
+                </button>
+              </div>
+            </div>
+
+            {showAddForm && <AddDataForm dataset={dataset} onSuccess={() => {
+              loadDataset();
+              setShowAddForm(false);
+            }} />}
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="flex items-center gap-2 text-lg font-medium text-gray-900 mb-4">
+                <Search size={18} /> Search by rsID
+              </h3>
+              <div className="flex gap-3">
                 <input
                   type="text"
                   placeholder="Enter rsID (e.g., rs1234)"
                   value={rsid}
                   onChange={(e) => setRsid(e.target.value)}
-                  className="form-control"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <button onClick={searchSNP} className="btn btn-primary">Search SNP</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="table-section">
-            <div className="table-header">
-              <h2><Database size={18} /> Data Explorer</h2>
-              <div className="table-search">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Search in results..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="search-input"
-                />
+                <button 
+                  onClick={searchSNP}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Search SNP
+                </button>
               </div>
             </div>
 
-            {loading ? (
-              <div className="loading-state">Loading data...</div>
-            ) : error ? (
-              <div className="error-state">{error}</div>
-            ) : filteredResults.length === 0 ? (
-              <div className="empty-state">No results found. Try a different search term.</div>
-            ) : (
-              <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      {Object.keys(filteredResults[0]).map((key) => (
-                        <th key={key}>{key.replace('_', ' ').toUpperCase()}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredResults.map((row, index) => (
-                      <tr key={index}>
-                        {Object.entries(row).map(([key, value], i) => (
-                          <td key={i}>
-                            {key === "Dataset Link" ? (
-                              <a href={value} target="_blank" rel="noopener noreferrer">
-                                {value}
-                              </a>
-                            ) : (
-                              value
-                            )}
-                          </td>
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="flex items-center gap-2 text-lg font-medium text-gray-900">
+                  <Database size={18} /> Data Explorer
+                </h3>
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search in results..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="text-center py-8 text-gray-600">Loading data...</div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-600">{error}</div>
+              ) : filteredResults.length === 0 ? (
+                <div className="text-center py-8 text-gray-600">No results found. Try a different search term.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse bg-white">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        {Object.keys(filteredResults[0]).map((key) => (
+                          <th key={key} className="px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50">
+                            {key.replace('_', ' ').toUpperCase()}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {filteredResults.map((row, index) => (
+                        <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                          {Object.entries(row).map(([key, value], i) => (
+                            <td key={i} className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                              {key === "Dataset Link" ? (
+                                <a href={value} className="text-blue-600 hover:text-blue-700 hover:underline" target="_blank" rel="noopener noreferrer">
+                                  {value}
+                                </a>
+                              ) : (
+                                value
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      <footer className="footer">K. Lathika | Email: korrapatilathika@gmail.com</footer>
+      </main>
+
+      <footer className="bg-white shadow-sm py-4 px-6 mt-auto">
+        <p className="text-center text-gray-600">
+          K. Lathika | Email: korrapatilathika@gmail.com
+        </p>
+      </footer>
     </div>
   );
 }
